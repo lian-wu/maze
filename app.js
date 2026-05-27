@@ -296,6 +296,7 @@
     const printBtn = document.getElementById("printPage");
     const canvas = document.getElementById("mazeCanvas");
     const meta = document.getElementById("meta");
+    const printInfo = document.getElementById("printInfo");
 
     function generate() {
       const width = Math.max(10, Math.min(80, Number(widthEl.value) || 30));
@@ -314,7 +315,8 @@
       });
 
       drawMaze(canvas, maze);
-      meta.textContent = `難易度：${diff.label}（轉向偏好 ${diff.turnBias}/5, 死路保留 ${diff.deadendKeep}/5）｜尺寸：${width}x${height}｜種子：${seed}`;
+      meta.textContent = `難易度：${diff.label}｜尺寸：${width}x${height}｜種子：${seed}`;
+      printInfo.textContent = `種子：${seed}　難易度：${diff.label}`;
     }
 
     randomSeedBtn.addEventListener("click", () => {

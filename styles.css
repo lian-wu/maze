@@ -110,28 +110,29 @@ button:hover {
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
   body {
     background: #fff;
   }
 
-  .header,
-  .controls,
-  .meta {
-    display: none !important;
+  body * {
+    visibility: hidden !important;
   }
 
-  .page {
-    max-width: none;
-    margin: 0;
-    padding: 0;
+  .printArea,
+  .printArea * {
+    visibility: visible !important;
   }
 
-  .panel {
-    margin: 0;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: #fff;
+  .printArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
   }
 
   .canvasWrap {

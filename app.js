@@ -213,10 +213,35 @@
     const margin = 20;
     const maxW = 1120;
     const maxH = 1120;
+    // 牆與通道使用不同像素比例：牆更細、通道更寬。
+    const wallUnit = 1;
+    const passUnit = 6;
+    const wallCols = Math.floor((maze.gridW + 1) / 2);
+    const passCols = Math.floor(maze.gridW / 2);
+    const wallRows = Math.floor((maze.gridH + 1) / 2);
+    const passRows = Math.floor(maze.gridH / 2);
 
-    const cell = Math.max(2, Math.floor(Math.min(maxW / maze.gridW, maxH / maze.gridH)));
-    const drawW = maze.gridW * cell;
-    const drawH = maze.gridH * cell;
+    const baseW = wallCols * wallUnit + passCols * passUnit;
+    const baseH = wallRows * wallUnit + passRows * passUnit;
+    let scale = Math.floor(Math.min(maxW / baseW, maxH / baseH));
+    if (scale < 1) scale = 1;
+
+    const wallPx = wallUnit * scale;
+    const passPx = passUnit * scale;
+
+    const xPos = new Array(maze.gridW + 1);
+    const yPos = new Array(maze.gridH + 1);
+    xPos[0] = 0;
+    yPos[0] = 0;
+    for (let i = 0; i < maze.gridW; i++) {
+      xPos[i + 1] = xPos[i] + (i % 2 === 0 ? wallPx : passPx);
+    }
+    for (let i = 0; i < maze.gridH; i++) {
+      yPos[i + 1] = yPos[i] + (i % 2 === 0 ? wallPx : passPx);
+    }
+
+    const drawW = xPos[maze.gridW];
+    const drawH = yPos[maze.gridH];
 
     canvas.width = drawW + margin * 2;
     canvas.height = drawH + margin * 2;
@@ -228,15 +253,22 @@
     for (let y = 0; y < maze.gridH; y++) {
       for (let x = 0; x < maze.gridW; x++) {
         if (maze.grid[y][x] === "#") {
-          ctx.fillRect(margin + x * cell, margin + y * cell, cell, cell);
+          ctx.fillRect(
+            margin + xPos[x],
+            margin + yPos[y],
+            xPos[x + 1] - xPos[x],
+            yPos[y + 1] - yPos[y]
+          );
         }
       }
     }
 
     function drawMarker(cx, cy, color, text) {
-      const px = margin + (cx * 2 + 1) * cell + cell / 2;
-      const py = margin + (cy * 2 + 1) * cell + cell / 2;
-      const r = Math.max(4, Math.floor(cell * 0.45));
+      const gx = cx * 2 + 1;
+      const gy = cy * 2 + 1;
+      const px = margin + xPos[gx] + passPx / 2;
+      const py = margin + yPos[gy] + passPx / 2;
+      const r = Math.max(4, Math.floor(passPx * 0.45));
 
       ctx.beginPath();
       ctx.arc(px, py, r, 0, Math.PI * 2);

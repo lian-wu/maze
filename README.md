@@ -29,3 +29,5 @@
 ## GitHub Pages
 
 推到 `main` 分支後，設定 Pages 來源為 `main / (root)`。
+
+線上網址：<https://lian-wu.github.io/maze/>

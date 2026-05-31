@@ -30,13 +30,53 @@
     }
   }
 
-  function makeRandomSeed() {
-    if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function") {
-      const arr = new Uint32Array(1);
-      globalThis.crypto.getRandomValues(arr);
-      return arr[0] >>> 0;
+  function makeRandomSeed(lastSeed = null) {
+    const minGap = 50000000;
+    let fallback = 0;
+    for (let i = 0; i < 16; i++) {
+      let candidate = 0;
+      if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function") {
+        const arr = new Uint32Array(1);
+        globalThis.crypto.getRandomValues(arr);
+        candidate = arr[0] >>> 0;
+      } else {
+        candidate = (Math.floor(Math.random() * 0x100000000) >>> 0);
+      }
+      fallback = candidate;
+      if (lastSeed == null || Math.abs(candidate - lastSeed) >= minGap) return candidate;
     }
-    return Math.floor(Math.random() * 0x100000000) >>> 0;
+
+    // 若連續抽樣都太接近，就做一次位元混合後回傳。
+    let x = (fallback ^ 0x9e3779b9) >>> 0;
+    x ^= x >>> 16;
+    x = Math.imul(x, 0x85ebca6b) >>> 0;
+    x ^= x >>> 13;
+    return x >>> 0;
+  }
+
+  function mazeSignature(grid) {
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const binsX = 8;
+    const binsY = 8;
+    const sig = new Array(binsX * binsY).fill(0);
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (grid[y][x] !== "#") {
+          const bx = Math.min(binsX - 1, Math.floor((x / cols) * binsX));
+          const by = Math.min(binsY - 1, Math.floor((y / rows) * binsY));
+          sig[by * binsX + bx]++;
+        }
+      }
+    }
+    return sig;
+  }
+
+  function signatureDistance(a, b) {
+    let d = 0;
+    for (let i = 0; i < a.length; i++) d += Math.abs(a[i] - b[i]);
+    return d;
   }
 
   function oppositeDir(d) {
@@ -306,14 +346,26 @@
     const canvas = document.getElementById("mazeCanvas");
     const meta = document.getElementById("meta");
     const printInfo = document.getElementById("printInfo");
+    let lastRandomSeed = null;
+    let lastRandomSignature = null;
 
-    function generate() {
+    function readInputs() {
       const width = Math.max(10, Math.min(80, Number(widthEl.value) || 30));
       const height = Math.max(10, Math.min(80, Number(heightEl.value) || 42));
       const seed = Math.abs(Number(seedEl.value) || 20260330) >>> 0;
       seedEl.value = String(seed);
-
       const diff = difficultyMap[difficultyEl.value] || difficultyMap.medium;
+      return { width, height, seed, diff };
+    }
+
+    function renderMaze(maze, diff, width, height, seed) {
+      drawMaze(canvas, maze);
+      meta.textContent = `難易度：${diff.label}｜尺寸：${width}x${height}｜種子：${seed}`;
+      printInfo.textContent = `種子：${seed}　難易度：${diff.label}`;
+    }
+
+    function generate() {
+      const { width, height, seed, diff } = readInputs();
 
       const maze = createMaze({
         width,
@@ -322,15 +374,48 @@
         turnBias: diff.turnBias,
         deadendKeep: diff.deadendKeep,
       });
-
-      drawMaze(canvas, maze);
-      meta.textContent = `難易度：${diff.label}｜尺寸：${width}x${height}｜種子：${seed}`;
-      printInfo.textContent = `種子：${seed}　難易度：${diff.label}`;
+      renderMaze(maze, diff, width, height, seed);
+      lastRandomSeed = seed;
+      lastRandomSignature = mazeSignature(maze.grid);
     }
 
     randomSeedBtn.addEventListener("click", () => {
-      seedEl.value = String(makeRandomSeed());
-      generate();
+      const { width, height, diff } = readInputs();
+      let chosenMaze = null;
+      let chosenSeed = null;
+      let chosenSig = null;
+
+      for (let tries = 0; tries < 12; tries++) {
+        const seed = makeRandomSeed(lastRandomSeed);
+        const maze = createMaze({
+          width,
+          height,
+          seed,
+          turnBias: diff.turnBias,
+          deadendKeep: diff.deadendKeep,
+        });
+        const sig = mazeSignature(maze.grid);
+
+        if (!lastRandomSignature) {
+          chosenMaze = maze;
+          chosenSeed = seed;
+          chosenSig = sig;
+          break;
+        }
+
+        const distance = signatureDistance(sig, lastRandomSignature);
+        if (distance >= width * height * 0.12 || tries === 11) {
+          chosenMaze = maze;
+          chosenSeed = seed;
+          chosenSig = sig;
+          break;
+        }
+      }
+
+      seedEl.value = String(chosenSeed);
+      lastRandomSeed = chosenSeed;
+      lastRandomSignature = chosenSig;
+      renderMaze(chosenMaze, diff, width, height, chosenSeed);
     });
 
     generateBtn.addEventListener("click", generate);

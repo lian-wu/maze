@@ -30,6 +30,15 @@
     }
   }
 
+  function makeRandomSeed() {
+    if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function") {
+      const arr = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(arr);
+      return arr[0] >>> 0;
+    }
+    return Math.floor(Math.random() * 0x100000000) >>> 0;
+  }
+
   function oppositeDir(d) {
     if (d === 0) return 1;
     if (d === 1) return 0;
@@ -320,7 +329,7 @@
     }
 
     randomSeedBtn.addEventListener("click", () => {
-      seedEl.value = String(Math.floor(Date.now() % 2147483647));
+      seedEl.value = String(makeRandomSeed());
       generate();
     });
 

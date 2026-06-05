@@ -381,7 +381,6 @@
 
     randomSeedBtn.addEventListener("click", () => {
       const { width, height, diff } = readInputs();
-      let chosenMaze = null;
       let chosenSeed = null;
       let chosenSig = null;
 
@@ -397,7 +396,6 @@
         const sig = mazeSignature(maze.grid);
 
         if (!lastRandomSignature) {
-          chosenMaze = maze;
           chosenSeed = seed;
           chosenSig = sig;
           break;
@@ -405,7 +403,6 @@
 
         const distance = signatureDistance(sig, lastRandomSignature);
         if (distance >= width * height * 0.12 || tries === 11) {
-          chosenMaze = maze;
           chosenSeed = seed;
           chosenSig = sig;
           break;
@@ -415,7 +412,6 @@
       seedEl.value = String(chosenSeed);
       lastRandomSeed = chosenSeed;
       lastRandomSignature = chosenSig;
-      renderMaze(chosenMaze, diff, width, height, chosenSeed);
     });
 
     generateBtn.addEventListener("click", generate);
